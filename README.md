@@ -1,4 +1,4 @@
-# 🌱 SmartPlantCare – Sistema de Monitoramento e Cuidado Automático de Plantas
+# 🌱 AutoPlantCare – Sistema de Monitoramento e Cuidado Automático de Plantas
 
 Projeto de um sistema embarcado com **Arduino Mega 2560** para **monitoramento ambiental** e **cuidados automatizados com plantas**, incluindo irrigação e controle de luz artificial.
 
@@ -56,7 +56,7 @@ Desenvolver um sistema capaz de:
 ```bash
 .
 ├── code/
-│   └── SmartPlantCare.ino     # Código principal do Arduino
+│   └── AutoPlantCare.ino     # Código principal do Arduino
 ├── docs/
 │   └── esquema_circuito.pdf   # Diagrama elétrico (opcional)
 ├── README.md
