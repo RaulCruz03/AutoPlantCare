@@ -1,53 +1,80 @@
+#include <SPI.h>
+#include <SD.h>
 #include <DHT.h>
 
-// Configuração do DHT11
-#define DHTPIN 4       // Pino digital onde o DHT11 está conectado
-#define DHTTYPE DHT11  // Tipo do sensor DHT
+// --- Configurações de pinos ---
+#define DHTPIN        4
+#define DHTTYPE       DHT11
+const int pinoLDR         = A0;
+const int pinoSolo        = A1;
+const int bombaPin        = 7;
+const int csPin           = 10;   // Chip Select do SD
+const int ledPin          = 8;    // Led ligado com a leitura do sensor LDR
+const int threshold       = 500;  // limiar para acender o LED
 
-DHT dht(DHTPIN, DHTTYPE);  // Cria o objeto do sensor
+DHT dht(DHTPIN, DHTTYPE);
+File dataFile;
 
-const int pinoLDR = A0;     // Pino analógico do LDR
-const int ledPin = 8;       // Pino digital conectado ao LED
-const int threshold = 500;  // Limiar para decidir se acende o LED (ajuste conforme necessário)
 void setup() {
   Serial.begin(9600);
-  Serial.println("Iniciando sensores...");
-  pinMode(ledPin,OUTPUT);
+  dht.begin();
 
-  dht.begin();  // Inicializa o sensor DHT11
+  pinMode(bombaPin, OUTPUT);
+
+  // Inicializa SD
+  if (!SD.begin(csPin)) {
+    Serial.println("Erro ao inicializar SD");
+    while (1);
+  }
+  Serial.println("SD iniciado");
+
+  // Cria cabeçalho no CSV se não existir
+  if (!SD.exists("datalog.csv")) {
+    dataFile = SD.open("datalog.csv", FILE_WRITE);
+    dataFile.println("timestamp_ms,ldr,umid_solo,umid_ar,temperatura");
+    dataFile.close();
+  }
 }
 
 void loop() {
-  // Leitura da luminosidade
-  int leitura = analogRead(pinoLDR);
-  Serial.print("Luminosidade: ");
-  Serial.println(leitura);
+  unsigned long t = millis();
+  int leituraLDR   = analogRead(pinoLDR);
+  int umidSolo     = analogRead(pinoSolo);
+  float h          = dht.readHumidity();
+  float temp       = dht.readTemperature();
 
-  // Leitura do DHT11
-  float h = dht.readHumidity();
-  float t = dht.readTemperature();
-
-  if(leitura < threshold){
+  if(threshold < 500){
     digitalWrite(ledPin, HIGH);
-  } else {
+  }else{
     digitalWrite(ledPin, LOW);
   }
 
-  delay(100);
+  // Aciona bomba conforme solo (exemplo)
+  if (umidSolo > 800) digitalWrite(bombaPin, HIGH);
+  else digitalWrite(bombaPin, LOW);
 
-  if (isnan(h) || isnan(t)) {
-    Serial.println("Erro ao ler do DHT11! Verifique conexões.");
+  // Abre arquivo e registra dados
+  dataFile = SD.open("datalog.csv", FILE_WRITE);
+  if (dataFile) {
+    dataFile.print(t);
+    dataFile.print(',');
+    dataFile.print(leituraLDR);
+    dataFile.print(',');
+    dataFile.print(umidSolo);
+    dataFile.print(',');
+    if (isnan(h) || isnan(temp)) {
+      dataFile.print("ERR,ERR");
+    } else {
+      dataFile.print(h);
+      dataFile.print(',');
+      dataFile.print(temp);
+    }
+    dataFile.println();
+    dataFile.close();
+    Serial.println("Registro gravado");
   } else {
-    Serial.print("Umidade: ");
-    Serial.print(h);
-    Serial.print(" %\t");
-
-    Serial.print("Temperatura: ");
-    Serial.print(t);
-    Serial.println(" °C");
+    Serial.println("Erro abrindo datalog.csv");
   }
 
-  // Aguarda 2 segundos antes da próxima leitura
-  delay(1500);
+  delay(2000);
 }
-
